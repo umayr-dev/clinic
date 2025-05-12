@@ -4,6 +4,11 @@ import { Alert } from 'antd'
 import Login from './components/Login'
 import './App.css'
 
+function ProtectedRoute({ children }) {
+  const isAuthenticated = localStorage.getItem('isAuthenticated')
+  return isAuthenticated ? children : <Navigate to="/login" />
+}
+
 function Dashboard() {
   const [selectedCategory, setSelectedCategory] = useState('LOR')
   const [selectedServices, setSelectedServices] = useState([])
@@ -63,6 +68,11 @@ function Dashboard() {
     }
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('isAuthenticated')
+    window.location.href = '/login'
+  }
+
   return (
     <div className="dashboard">
       {showSuccess && (
@@ -87,6 +97,12 @@ function Dashboard() {
             {category.name}
           </button>
         ))}
+        <button 
+          className="category-btn logout-btn" 
+          onClick={handleLogout}
+        >
+          Chiqish
+        </button>
       </div>
 
       {/* Services */}
@@ -135,7 +151,14 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Dashboard />} />
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

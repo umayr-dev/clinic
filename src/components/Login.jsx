@@ -11,6 +11,7 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (username === 'clinic' && password === 'clinic') {
+      localStorage.setItem('isAuthenticated', 'true')
       navigate('/')
     } else {
       setError('Invalid username or password')
