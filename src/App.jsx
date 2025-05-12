@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Alert } from 'antd'
 import Login from './components/Login'
 import './App.css'
@@ -10,6 +10,7 @@ function ProtectedRoute({ children }) {
 }
 
 function Dashboard() {
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('LOR')
   const [selectedServices, setSelectedServices] = useState([])
   const [showSuccess, setShowSuccess] = useState(false)
@@ -70,7 +71,7 @@ function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated')
-    window.location.href = '/login'
+    navigate('/login')
   }
 
   return (
