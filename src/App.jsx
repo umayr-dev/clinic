@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Alert } from 'antd'
 import Login from './components/Login'
+import ReceiptScanner from './components/ReceiptScanner'
+import { printReceipt } from './utils/receipt'
 import './App.css'
 
 function ProtectedRoute({ children }) {
@@ -50,28 +52,41 @@ function Dashboard() {
     setSelectedServices(selectedServices.filter(s => s.id !== serviceId))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedServices.length > 0) {
-      // Calculate total before clearing
       const total = selectedServices.reduce((sum, service) => sum + parseInt(service.price), 0)
       setTotalAmount(total)
+
+      // Print receipt
+      const printed = await printReceipt(selectedServices, total)
       
-      // Clear selected services
-      setSelectedServices([])
-      
-      // Show success alert
-      setShowSuccess(true)
-      
-      // Hide alert after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false)
-      }, 3000)
+      if (printed) {
+        setSelectedServices([])
+        setShowSuccess(true)
+        setTimeout(() => {
+          setShowSuccess(false)
+        }, 3000)
+      } else {
+        // Show error alert if printing fails
+        alert('Chek chiqarishda xatolik yuz berdi')
+      }
     }
   }
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated')
     navigate('/login')
+  }
+
+  const handleCategoryClick = (categoryId) => {
+    // Only allow category change if no services are selected
+    if (selectedServices.length === 0) {
+      setSelectedCategory(categoryId)
+    }
+  }
+
+  const handleClearServices = () => {
+    setSelectedServices([])
   }
 
   return (
@@ -92,12 +107,23 @@ function Dashboard() {
         {categories.map(category => (
           <button
             key={category.id}
-            className={`category-btn ${selectedCategory === category.id ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.id)}
+            className={`category-btn ${selectedCategory === category.id ? 'active' : ''} ${
+              selectedServices.length > 0 && selectedCategory !== category.id ? 'disabled' : ''
+            }`}
+            onClick={() => handleCategoryClick(category.id)}
+            disabled={selectedServices.length > 0 && selectedCategory !== category.id}
           >
             {category.name}
           </button>
         ))}
+        {selectedServices.length > 0 && (
+          <button 
+            className="category-btn clear-btn"
+            onClick={handleClearServices}
+          >
+            Bekor qilish
+          </button>
+        )}
         <button 
           className="category-btn logout-btn" 
           onClick={handleLogout}
@@ -160,6 +186,11 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route path="/scanner" element={
+          <ProtectedRoute>
+            <ReceiptScanner />
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
