@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { Alert } from 'antd'
 import Login from './components/Login'
 import ReceiptScanner from './components/ReceiptScanner'
 import { printReceipt } from './utils/receipt'
+import { fetchCategories, fetchServices, createOrder } from './services/api'
 import './App.css'
 
 function ProtectedRoute({ children }) {
@@ -13,62 +14,74 @@ function ProtectedRoute({ children }) {
 
 function Dashboard() {
   const navigate = useNavigate()
-  const [selectedCategory, setSelectedCategory] = useState('LOR')
+  const [categories, setCategories] = useState([])
+  const [allServices, setAllServices] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedServices, setSelectedServices] = useState([])
   const [showSuccess, setShowSuccess] = useState(false)
   const [totalAmount, setTotalAmount] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  const categories = [
-    { id: 'LOR', name: 'LOR' },
-    { id: 'fizaterpiya', name: 'Fizaterpiya' },
-    { id: 'massaj', name: 'Massaj' }
-  ]
-
-  const services = {
-    LOR: [
-      { id: 1, name: 'Quloq yuvish', price: '50000' },
-      { id: 2, name: 'Tomoq qarash', price: '30000' },
-      { id: 3, name: 'Burun yuvish', price: '40000' }
-    ],
-    fizaterpiya: [
-      { id: 4, name: 'Elektroforez', price: '60000' },
-      { id: 5, name: 'UVCh', price: '45000' },
-      { id: 6, name: 'Ultratovush', price: '55000' }
-    ],
-    massaj: [
-      { id: 7, name: 'Umimiy massaj', price: '100000' },
-      { id: 8, name: 'Bel massaji', price: '70000' },
-      { id: 9, name: 'Oyoq massaji', price: '60000' }
-    ]
-  }
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [categoriesData, servicesData] = await Promise.all([
+          fetchCategories(),
+          fetchServices()
+        ])
+        setCategories(categoriesData)
+        setAllServices(servicesData)  // Services are being set here
+        setSelectedCategory(categoriesData[0]?._id)
+        setLoading(false)
+      } catch (error) {
+        console.error('Data loading error:', error)
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
 
   const handleServiceClick = (service) => {
-    if (!selectedServices.find(s => s.id === service.id)) {
+    if (!selectedServices.find(s => s._id === service._id)) {
       setSelectedServices([...selectedServices, service])
     }
   }
 
   const handleRemoveService = (serviceId) => {
-    setSelectedServices(selectedServices.filter(s => s.id !== serviceId))
+    setSelectedServices(selectedServices.filter(s => s._id !== serviceId))
   }
 
   const handleSubmit = async () => {
     if (selectedServices.length > 0) {
       const total = selectedServices.reduce((sum, service) => sum + parseInt(service.price), 0)
-      setTotalAmount(total)
-
-      // Print receipt
-      const printed = await printReceipt(selectedServices, total)
       
-      if (printed) {
-        setSelectedServices([])
-        setShowSuccess(true)
-        setTimeout(() => {
-          setShowSuccess(false)
-        }, 3000)
-      } else {
-        // Show error alert if printing fails
-        alert('Chek chiqarishda xatolik yuz berdi')
+      try {
+        const orderData = {
+          services: selectedServices.map(service => ({
+            _id: service._id,
+            category_id: service.category_id._id,
+            name: service.name,
+            price: service.price
+          })),
+          totalAmount: total
+        }
+
+        await createOrder(orderData)
+        
+        // Print receipt
+        const printed = await printReceipt(selectedServices, total)
+        
+        if (printed) {
+          setTotalAmount(total)
+          setSelectedServices([])
+          setShowSuccess(true)
+          setTimeout(() => {
+            setShowSuccess(false)
+          }, 3000)
+        }
+      } catch (error) {
+        console.error('Order creation failed:', error)
+        alert('Buyurtma yuborishda xatolik')
       }
     }
   }
@@ -89,6 +102,10 @@ function Dashboard() {
     setSelectedServices([])
   }
 
+  if (loading) {
+    return <div className="loading">Loading...</div>
+  }
+
   return (
     <div className="dashboard">
       {showSuccess && (
@@ -106,12 +123,12 @@ function Dashboard() {
       <div className="categories">
         {categories.map(category => (
           <button
-            key={category.id}
-            className={`category-btn ${selectedCategory === category.id ? 'active' : ''} ${
-              selectedServices.length > 0 && selectedCategory !== category.id ? 'disabled' : ''
+            key={category._id}
+            className={`category-btn ${selectedCategory === category._id ? 'active' : ''} ${
+              selectedServices.length > 0 && selectedCategory !== category._id ? 'disabled' : ''
             }`}
-            onClick={() => handleCategoryClick(category.id)}
-            disabled={selectedServices.length > 0 && selectedCategory !== category.id}
+            onClick={() => handleCategoryClick(category._id)}
+            disabled={selectedServices.length > 0 && selectedCategory !== category._id}
           >
             {category.name}
           </button>
@@ -136,16 +153,18 @@ function Dashboard() {
       <div className="services">
         <h2>Xizmatlar</h2>
         <div className="services-grid">
-          {services[selectedCategory].map(service => (
-            <div
-              key={service.id}
-              className="service-card"
-              onClick={() => handleServiceClick(service)}
-            >
-              <h3>{service.name}</h3>
-              <p>{service.price} so`m</p>
-            </div>
-          ))}
+          {allServices
+            .filter(service => service.category_id._id === selectedCategory)
+            .map(service => (
+              <div
+                key={service._id}
+                className="service-card"
+                onClick={() => handleServiceClick(service)}
+              >
+                <h3>{service.name}</h3>
+                <p>{service.price} so'm</p>
+              </div>
+            ))}
         </div>
       </div>
 

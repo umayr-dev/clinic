@@ -59,6 +59,41 @@ Check ID: ${receiptId}
     // Add QR code
     pdf.addImage(qrCodeUrl, 'PNG', 25, yPos + 5, 30, 30)
 
+    // Create receipt template with extra space at bottom
+    const receiptTemplate = `
+      <div style="font-family: 'Arial'; width: 300px;">
+        <div style="border: 1px solid #000; padding: 15px; margin: 10px;">
+          <h3 style="text-align: center; margin: 0 0 10px 0;">Clinic Check</h3>
+          
+          <div style="margin: 10px 0;">
+            <div>Sana: ${moment().format('DD/MM/YYYY')}</div>
+            <div>Vaqt: ${moment().format('HH:mm:ss')}</div>
+          </div>
+
+          <div style="margin: 15px 0;">
+            ${services.map(service => `
+              <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+                <span>${service.name}</span>
+                <span>${service.price} so'm</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px solid #000; padding-top: 10px;">
+            <strong>Jami:</strong>
+            <strong>${totalAmount} so'm</strong>
+          </div>
+
+          <div style="text-align: center; margin-top: 15px;">
+            <img src="${qrCodeUrl}" width="150" height="150" />
+          </div>
+
+          <!-- Add extra space at bottom -->
+          <br><br><br><br>
+        </div>
+      </div>
+    `
+
     // Save PDF and receipt data
     pdf.save(`check-${receiptId}.pdf`)
     
