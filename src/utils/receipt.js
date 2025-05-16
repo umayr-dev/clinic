@@ -78,7 +78,7 @@ export const printReceipt = async (services, totalAmount) => {
             <div class="qr-code">
               <img src="${qrCodeUrl}" width="150" height="150"/>
             </div>
-
+              <br/><br/><br/>
             <div class="footer-space"></div>
           </div>
         </body>
